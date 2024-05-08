@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-ch">
+<head>
+    <meta charset="UTF-8">
+    <title>工程经济学小工具导航</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="工程经济学小工具导航">
+    <meta name="keywords" content="工程经济学小工具导航">
+    <!-- 引入组件库 -->
+    <script src="https://cdn.staticfile.org/echarts/4.3.0/echarts.min.js"></script>
+    <script src="https://cdn.staticfile.org/vue/2.5.16/vue.min.js"></script>
+    <script src="https://cdn.staticfile.org/element-ui/2.15.12/index.min.js"></script>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="https://cdn.staticfile.org/element-ui/2.15.12/theme-chalk/index.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body  class="hold-transition">
+<h1 align="center">工程经济学小工具导航</h1>
+<div id="app">
+    <div class="app-container" style="text-align: center" >
+        <el-container>
+            <el-main width="100%">
+                <a href="./Calculator.html" target="_blank">
+                    <el-button size="large" type="primary" >项目经济分析计算器</el-button>
+                </a>
+                <a href="./MonteCarlo.html" target="_blank">
+                    <el-button size="large" type="primary" >蒙特卡洛项目风险分析工具</el-button>
+                </a>
+                <a href="./AnalysisSensitivity.html" target="_blank">
+                    <el-button size="large" type="primary" >敏感性分析工具</el-button>
+                </a>
+            </el-main>
+        </el-container>
+    </div>
+</div>
+<script type="text/javascript">
+    new Vue({
+        el: '#app',
+    });
+</script>
+</body>
+</html>
