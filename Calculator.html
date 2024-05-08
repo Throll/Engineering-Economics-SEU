@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-ch">
+<head>
+    <meta charset="UTF-8">
+    <title>项目经济分析计算器</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="项目经济分析计算器">
+    <meta name="keywords" content="项目经济分析计算器">
+    <!-- 引入组件库 -->
+    <script src="https://cdn.staticfile.org/echarts/4.3.0/echarts.min.js"></script>
+    <script src="https://cdn.staticfile.org/vue/2.5.16/vue.min.js"></script>
+    <script src="https://cdn.staticfile.org/element-ui/2.15.12/index.min.js"></script>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="https://cdn.staticfile.org/element-ui/2.15.12/theme-chalk/index.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body  class="hold-transition">
+<h1 align="center">项目经济分析计算器</h1>
+<div id="app">
+    <div class="app-container">
+        <el-container>
+            <el-aside width="20%">
+                <el-tag style="width: 80%; margin-left: 10%; margin-right: 10%; margin-bottom: 20px;">设置具体分期数和现金单位</el-tag>
+                <el-input v-model="stages" placeholder="具体分期数" style="width: 80%; margin-left: 10%; margin-bottom: 20px; margin-top: 20px;"></el-input>
+                <el-input v-model="unit" placeholder="现金单位" style="width: 80%; margin-left: 10%; margin-bottom: 20px; margin-top: 20px;"></el-input>
+                <el-button type="primary" @click="handleSet()" style="width: 80%; margin-left: 10%; margin-bottom: 20px; margin-top: 20px;">完成设置</el-button>
+            </el-aside>
+
+            <el-main width="80%">
+                <el-table :data="tableData" :cell-style="{ 'text-align': 'center'}" :header-cell-style="{'text-align': 'center','font-size':'14px'}" style="width: 100%" max-height='600'>
+                    <el-table-column label="期号" type="index" :index="indexMethod"></el-table-column>
+                    <el-table-column label="现金流出">
+                        <el-input slot-scope="scope" v-model="scope.row.outcashflow"></el-input>
+                    </el-table-column>
+                    <el-table-column label="现金流入">
+                        <el-input slot-scope="scope" v-model="scope.row.incashflow"></el-input>
+                    </el-table-column>
+                    <el-table-column label="操作">
+                        <template slot-scope="scope">
+                            <el-button size="mini" type="primary" @click="handleCopy(scope.$index, scope.row)">复制本期</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </el-main>
+        </el-container>
+    </div>
+    <div class="app-container">
+        <el-container>
+            <el-aside width="20%">
+                <el-button type="primary" @click="ShowCashFlowGraph()" style="width: 80%; margin-left: 10%; margin-top: 200px;">绘制现金流量图</el-button>
+            </el-aside>
+
+            <el-main width="80%">
+                <div id="chart1" style="height:600px;"></div>
+            </el-main>
+        </el-container>
+    </div>
+    <div class="app-container">
+        <el-container>
+            <el-aside width="30%">
+                <el-table :data="tableData2" :cell-style="{ 'text-align': 'center'}" :header-cell-style="{'text-align': 'center','font-size':'14px'}" style="width: 100%" max-height='300'>
+                    <el-table-column label="基准收益率(%)">
+                        <el-input slot-scope="scope" v-model="scope.row.ic"></el-input>
+                    </el-table-column>
+                    <el-table-column label="操作">
+                        <template slot-scope="scope">
+                            <el-button size="mini" type="primary" @click="handleCal(scope.$index, scope.row)">计算NPV</el-button>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="项目NPV">
+                        <el-input slot-scope="scope" v-model="scope.row.npv"></el-input>
+                    </el-table-column>
+                </el-table>
+                <el-button type="primary" @click="handleAdd()" style="width: 80%; margin-left: 10%; margin-top: 20px;">新增收益率</el-button>
+                <el-button type="primary" @click="ShowNPVGraph()" style="width: 80%; margin-left: 10%; margin-top: 20px;">绘制NPV曲线</el-button>
+                <el-button type="primary" @click="CalIRR()" style="width: 80%; margin-left: 10%; margin-top: 200px;">计算IRR</el-button>
+                <el-input v-model="irr" style="width: 80%; margin-left: 10%; margin-top: 20px;" placeholder="IRR计算结果在此输出"></el-input>
+            </el-aside>
+
+            <el-main width="70%">
+                <div id="chart2" style="height:600px;"></div>
+            </el-main>
+        </el-container>
+    </div>
+</div>
+<script type="text/javascript">
+    new Vue({
+        el: '#app',
+        data:{
+            stages: 10,
+            unit: '元',
+            irr: '',
+            tableData: [],
+            tableData2: [],
+        },
+        methods: {
+            indexMethod(index) {
+                return index;
+            },
+            handleAdd() {
+                let item = {
+                    ic: '',
+                    npv: ''
+                };
+                this.tableData2.push(item);
+            },
+            handleSet() {
+                this.tableData = [];
+                for(let i = 0; i <= this.stages; i++){
+                    let item = {
+                        incashflow: 0,
+                        outcashflow: 0
+                    };
+                    this.tableData.push(item);
+                }
+            },
+            handleCopy(index, row) {
+                if(index == this.tableData.length){
+                    //哪还有下一项。。。
+                    return;
+                }
+                this.tableData[index + 1].incashflow = this.tableData[index].incashflow;
+                this.tableData[index + 1].outcashflow = this.tableData[index].outcashflow;
+            },
+            handleCal(index, row) {
+                let data1 = [];
+                for(let i = 0; i < this.tableData.length; i++){
+                    data1.push(parseFloat(this.tableData[i].incashflow) - parseFloat(this.tableData[i].outcashflow));
+                }
+                let ic = parseFloat(this.tableData2[index].ic);
+                let npv = 0.0;
+                for(let j = 0; j < this.tableData.length; j++){
+                    npv += data1[j] / Math.pow((1.0 + ic / 100) , j);
+                }
+                this.tableData2[index].npv = npv;
+            },
+            CalIRR(){
+                let data1 = [];
+                for(let i = 0; i < this.tableData.length; i++){
+                    data1.push(parseFloat(this.tableData[i].incashflow) - parseFloat(this.tableData[i].outcashflow));
+                }
+                let irr = this.IRR(data1);
+                if(irr == -1.1){
+                    this.irr = "NaN";
+                }else{
+                    this.irr = (parseFloat(irr * 100)).toFixed(4) + "%";
+                }
+            },
+            IRR_CAL(data){
+                //这是IRR的计算逻辑
+                //使用遍历 + 一次线性插值实现计算IRR
+                //找出一个大概值，然后再一次线性插值解决问题
+                let irr = -1.1;
+                for(let i = 0; i < 1; i += 0.01){
+                    let npv1 = 0.0 , npv2 = 0.0;
+                    for(let n = 0; n < data.length; n++){
+                        npv1 += data[n] / Math.pow(1 + i , n);
+                        npv2 += data[n] / Math.pow(1 + i + 0.01 , n);
+                    }
+                    if(npv1 * npv2 == 0){
+                        return i;
+                    }
+                    if(npv1 * npv2 < 0){
+                        //此时找到插值所需零点所在的区间
+                        irr = i;
+                        break;
+                    }
+                }
+                if(irr == -1.1){
+                    return irr;
+                }
+                //找到有零点的范围才能插值，否则没有意义
+                let npv1 = 0.0 , npv2 = 0.0;
+                let r1 = irr , r2 = irr + 0.01;
+                for(let n = 0; n < data.length; n++){
+                    npv1 += data[n] / Math.pow(1 + r1 , n);
+                    npv2 += data[n] / Math.pow(1 + r2 , n);
+                }
+                irr = r1 + (r2 - r1) * npv1 / (npv1 - npv2);
+                return irr;
+            },
+			IRR(data){
+                let irr = this.IRR_CAL(data);
+                if(irr == -1.1){
+                    alert("本工具无法计算该数据，请使用excel计算！");
+                    return irr;
+                }
+                return irr;
+			},
+            ShowCashFlowGraph(){
+                let data1 = [] , data2 = [];
+                let data3 = [];
+                for(let i = 0; i < this.tableData.length; i++){
+                    data1.push(i.toString());
+                    data2.push(parseFloat(this.tableData[i].incashflow) - parseFloat(this.tableData[i].outcashflow));
+                    let Item = [
+                        {coord: [data1[data1.length - 1], 0] },
+                        {coord: [data1[data1.length - 1], data2[data2.length - 1]] }
+                    ];
+                    data3.push(Item);
+                }
+                let myChart1 = echarts.init(document.getElementById('chart1'));
+                // 使用刚指定的配置项和数据显示图表。
+                myChart1.setOption({
+                    title: {
+                        text: '净现金流量图'
+                    },
+                    tooltip: {},
+                    legend: {
+                        data:['每期净现金流量']
+                    },
+                    xAxis: {
+                        type: 'category',
+                        boundaryGap: false,
+                        name: '当前分期',
+                        data: data1
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: this.unit,
+                    },
+                    series: [{
+                        name: '本期净现金流量值',
+                        type: 'scatter',
+                        itemStyle: {
+                            normal: {
+                                label: {
+                                    show: true,		//开启显示
+                                    position: 'top',	//在上方显示
+                                    textStyle: {	    //数值样式
+                                        color: 'black',
+                                        fontSize: 16
+                                    }
+                                }
+                            }
+                        },
+                        data: data2,
+                    },
+                        {
+                            name: '净现金流量',
+                            type: 'line',
+                            markLine: {
+                                symbol:['none','arrow'],
+                                lineStyle: {
+                                    color : 'red',
+                                    type: 'solid'
+                                },
+                                data: data3
+                            }
+                        }
+                    ]
+                });
+            },
+            ShowNPVGraph(){
+                let data1 = [];
+                for(let i = 0; i < this.tableData.length; i++){
+                    data1.push(parseFloat(this.tableData[i].incashflow) - parseFloat(this.tableData[i].outcashflow));
+                }
+
+                let irr = this.IRR_CAL(data1);
+                //生成npv图像
+                let data2 = [] , data3 = [];
+                if(irr == -1.1){
+                    //irr不可计算，直接绘制从0到100%全部
+                    for(let ic = 0; ic <= 100; ic++){
+                        data2.push(ic);
+                        let npv = 0.0;
+                        for(let j = 0; j < data1.length; j++){
+                            npv += data1[j] / Math.pow((1 + (parseFloat(ic) / 100)), j);
+                        }
+                        data3.push(npv);
+                    }
+                }else{
+                    //如果irr可以计算，那就把NPV图像范围写死[irr - 10% , irr + 10%]
+                    let temp = parseInt(parseFloat(irr) * 100);
+                    for(let ic = temp < 10 ? 0 : temp - 10; ic <= temp + 10; ic++){
+                        data2.push(ic);
+                        let npv = 0.0;
+                        for(let j = 0; j < data1.length; j++){
+                            npv += data1[j] / Math.pow((1 + (parseFloat(ic) / 100)), j);
+                        }
+                        data3.push(npv);
+                    }
+                }
+
+                //生成npv图像
+                let myChart2 = echarts.init(document.getElementById('chart2'));
+                myChart2.setOption({
+                    title: {
+                        text: '收益率—净现值函数图像:'
+                    },
+                    tooltip: {},
+                    legend: {
+                        data:['NPV']
+                    },
+                    xAxis: {
+                        type: 'category',
+                        boundaryGap: false,
+                        minInterval: 1,
+                        name: '基准收益率/%',
+                        data: data2
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: this.unit
+                    },
+                    series: [{
+                        name: 'NPV值',
+                        type: 'line',
+                        smooth: true,
+                        symbol:"none",
+                        data: data3
+                    }]
+                });
+            }
+        }
+    });
+</script>
+</body>
+</html>
