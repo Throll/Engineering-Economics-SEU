@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-ch">
+<head>
+    <meta charset="UTF-8">
+    <title>敏感性分析工具</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="敏感性分析工具">
+    <meta name="keywords" content="敏感性分析工具">
+    <!-- 引入组件库 -->
+    <script src="https://cdn.staticfile.org/echarts/4.3.0/echarts.min.js"></script>
+    <script src="https://cdn.staticfile.org/vue/2.5.16/vue.min.js"></script>
+    <script src="https://cdn.staticfile.org/element-ui/2.15.12/index.min.js"></script>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="https://cdn.staticfile.org/element-ui/2.15.12/theme-chalk/index.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body  class="hold-transition">
+<h1 align="center">敏感性分析工具</h1>
+<div id="app">
+    <div class="app-container" style="text-align: center">
+        <el-container>
+            <el-main>
+                <el-form :inline="true" label-width="200px" width="50%">
+                    <h3 align="center">项目基本信息输入</h3>
+                </el-form>
+                <el-form :inline="true" label-width="120px" width="50%">
+                    <el-form-item label="投资">
+                        <el-input v-model="form.Investment"></el-input>
+                    </el-form-item>
+                </el-form>
+                <el-form :inline="true" label-width="120px" width="80%">
+                    <el-form-item label="基准收益率(%)">
+                        <el-input v-model="form.BenchmarkYield"></el-input>
+                    </el-form-item>
+                </el-form>
+                <el-form :inline="true" label-width="120px" width="80%">
+                    <el-form-item label="年度支出">
+                        <el-input v-model="form.AnnualExpenditure"></el-input>
+                    </el-form-item>
+                </el-form>
+                <el-form :inline="true" label-width="120px" width="80%">
+                    <el-form-item label="年度收益">
+                        <el-input v-model="form.AnnualIncome"></el-input>
+                    </el-form-item>
+                </el-form>
+                <el-form :inline="true" label-width="120px" width="80%">
+                    <el-form-item label="寿命期">
+                        <el-input v-model="form.LifeCycle"></el-input>
+                    </el-form-item>
+                </el-form>
+                <el-form :inline="true" label-width="120px" width="80%">
+                    <el-form-item label="残值">
+                        <el-input v-model="form.ResidualValue"></el-input>
+                    </el-form-item>
+                </el-form>
+            </el-main>
+            <el-aside width="50%" style="text-align: center; margin-top: 80px" >
+                <el-form :inline="true" >
+                    <el-form-item label="计量单位">
+                        <el-input v-model="unit" placeholder="现金的计量单位"></el-input>
+                    </el-form-item>
+                </el-form>
+                <el-form :inline="true">
+                    <el-form-item>
+                        <el-button size="medium" type="primary" @click="AnalysisSensitivity()">敏感性计算分析</el-button>
+                    </el-form-item>
+                </el-form>
+                <el-form :inline="true">
+                    <el-form-item>
+                        <el-button size="medium" type="primary" @click="ShowGraph()">绘制敏感性分析图</el-button>
+                    </el-form-item>
+                </el-form>
+                <el-form :inline="true">
+                    <el-form-item label="敏感性排序（按绝对值）">
+                        <el-select v-model="order" @change="selectItemChange">
+                            <el-option label="从小到大（升序）" value="acs"></el-option>
+                            <el-option label="从大到小（降序）" value="des"></el-option>
+                        </el-select>
+                    </el-form-item>
+                </el-form>
+                <el-form :inline="true">
+                    <el-form-item>
+                        <el-checkbox :indeterminate="isIndeterminate" v-model="checkAll" @change="handleCheckAllChange">全选</el-checkbox>
+                        <el-checkbox-group v-model="checkedItems" @change="handleCheckedItemsChange">
+                            <el-checkbox v-for="item in items" :label="item" :key="item">{{item}}</el-checkbox>
+                        </el-checkbox-group>
+                    </el-form-item>
+                </el-form>
+            </el-aside>
+        </el-container>
+    </div>
+    <div class="app-container">
+        <el-container>
+            <el-main>
+                <el-table :data="analysis.data" style="width: 100%">
+                    <el-table-column label="不确定因素\变化幅度">
+                        <el-input slot-scope="scope" v-model="scope.row.name"></el-input>
+                    </el-table-column>
+                    <el-table-column label="-20%">
+                        <el-input slot-scope="scope" v-model="scope.row.data0"></el-input>
+                    </el-table-column>
+                    <el-table-column label="-10%">
+                        <el-input slot-scope="scope" v-model="scope.row.data1"></el-input>
+                    </el-table-column>
+                    <el-table-column label="0">
+                        <el-input slot-scope="scope" v-model="scope.row.data2"></el-input>
+                    </el-table-column>
+                    <el-table-column label="10%">
+                        <el-input slot-scope="scope" v-model="scope.row.data3"></el-input>
+                    </el-table-column>
+                    <el-table-column label="20%">
+                        <el-input slot-scope="scope" v-model="scope.row.data4"></el-input>
+                    </el-table-column>
+                    <el-table-column label="平均+1%">
+                        <el-input slot-scope="scope" v-model="scope.row.data5"></el-input>
+                    </el-table-column>
+                    <el-table-column label="平均-1%">
+                        <el-input slot-scope="scope" v-model="scope.row.data6"></el-input>
+                    </el-table-column>
+                </el-table>
+            </el-main>
+
+        </el-container>
+
+        <div class="app-container">
+            <el-container>
+                <el-main>
+                    <div id="chart1" style="height:600px;"></div>
+                </el-main>
+            </el-container>
+        </div>
+
+    </div>
+
+</div>
+<script type="text/javascript">
+    new Vue({
+        el: '#app',
+        data: {
+            checkAll: true,
+            checkedItems: ['投资', '基准收益率', '年度支出', '年度收益','寿命期','残值'],
+            items: ['投资', '基准收益率', '年度支出', '年度收益','寿命期','残值'],
+            isIndeterminate: false,
+
+            unit: '万元',
+            analysis: {
+                data:[],
+            },
+            form: {
+                Investment: '',
+                BenchmarkYield: '',
+                AnnualExpenditure: '',
+                AnnualIncome: '',
+                LifeCycle: '',
+                ResidualValue: ''
+            },
+            order: 'des',
+        },
+        methods: {
+            //单次NPV计算过程，参数是投资，基本收益率，年支，年收，寿命期，残值
+            NPV(investment,benchmarkYield, annualExpenditure, annualIncome, lifeCycle, residualValue){
+                return (parseFloat(annualIncome) - parseFloat(annualExpenditure)) / (1.0 + parseFloat(benchmarkYield)) * (1 - Math.pow(1.0 / (1.0 + parseFloat(benchmarkYield)), parseInt(lifeCycle))) / (1 - 1.0 / (1.0 + parseFloat(benchmarkYield))) - parseFloat(investment) + (parseFloat(residualValue) / Math.pow(1.0 + parseFloat(benchmarkYield), parseInt(lifeCycle)));
+            },
+            AnalysisSensitivity() {
+                //清除数据
+                this.analysis.data = [];
+                //初始投资
+                let investment = parseFloat(this.form.Investment);
+                //基准收益率
+                let benchmarkYield = parseFloat(this.form.BenchmarkYield) / 100;
+                //年度支出
+                let annualExpenditure = parseFloat(this.form.AnnualExpenditure);
+                //年度收益
+                let annualIncome = parseFloat(this.form.AnnualIncome);
+                //寿命期，需要取整
+                let lifeCycle = parseInt(this.form.LifeCycle);
+                //残值
+                let residualValue = parseFloat(this.form.ResidualValue);
+
+                //首先计算这一情况下项目的NPV，也就是确定性分析
+                let npv0 = this.NPV(investment,benchmarkYield,annualExpenditure,annualIncome,lifeCycle,residualValue);
+                npv0 = parseFloat(npv0.toFixed(2));
+
+                if(this.checkedItems.includes('投资')){
+                    let data = {
+                        name: '投资',
+                        data0: this.NPV(investment * 0.8,benchmarkYield,annualExpenditure,annualIncome,lifeCycle,residualValue),
+                        data1: this.NPV(investment * 0.9,benchmarkYield,annualExpenditure,annualIncome,lifeCycle,residualValue),
+                        data2: npv0,
+                        data3: this.NPV(investment * 1.1,benchmarkYield,annualExpenditure,annualIncome,lifeCycle,residualValue),
+                        data4: this.NPV(investment * 1.2,benchmarkYield,annualExpenditure,annualIncome,lifeCycle,residualValue),
+                        data5: 0.0,
+                        data6: 0.0,
+                    }
+                    data.data0 = parseFloat(data.data0.toFixed(2));
+                    data.data1 = parseFloat(data.data1.toFixed(2));
+                    data.data3 = parseFloat(data.data3.toFixed(2));
+                    data.data4 = parseFloat(data.data4.toFixed(2));
+                    data.data5 = ((parseFloat(data.data4) - npv0) / npv0) / 0.2;
+                    data.data5 = parseFloat(data.data5.toFixed(2));
+                    data.data6 = -data.data5;
+                    this.analysis.data.push(data);
+                }
+
+                if(this.checkedItems.includes('基准收益率')){
+                    let data = {
+                        name: '基准收益率',
+                        data0: this.NPV(investment,benchmarkYield * 0.8,annualExpenditure,annualIncome,lifeCycle,residualValue),
+                        data1: this.NPV(investment,benchmarkYield * 0.9,annualExpenditure,annualIncome,lifeCycle,residualValue),
+                        data2: npv0,
+                        data3: this.NPV(investment,benchmarkYield * 1.1,annualExpenditure,annualIncome,lifeCycle,residualValue),
+                        data4: this.NPV(investment,benchmarkYield * 1.2,annualExpenditure,annualIncome,lifeCycle,residualValue),
+                        data5: 0.0,
+                        data6: 0.0,
+                    }
+                    data.data0 = parseFloat(data.data0.toFixed(2));
+                    data.data1 = parseFloat(data.data1.toFixed(2));
+                    data.data3 = parseFloat(data.data3.toFixed(2));
+                    data.data4 = parseFloat(data.data4.toFixed(2));
+                    data.data5 = ((parseFloat(data.data4) - npv0) / npv0) / 0.2;
+                    data.data5 = parseFloat(data.data5.toFixed(2));
+                    data.data6 = -data.data5;
+                    this.analysis.data.push(data);
+                }
+
+                if(this.checkedItems.includes('年度支出')){
+                    let data = {
+                        name: '年度支出',
+                        data0: this.NPV(investment,benchmarkYield,annualExpenditure * 0.8,annualIncome,lifeCycle,residualValue),
+                        data1: this.NPV(investment,benchmarkYield,annualExpenditure * 0.9,annualIncome,lifeCycle,residualValue),
+                        data2: npv0,
+                        data3: this.NPV(investment,benchmarkYield,annualExpenditure * 1.1,annualIncome,lifeCycle,residualValue),
+                        data4: this.NPV(investment,benchmarkYield,annualExpenditure * 1.2,annualIncome,lifeCycle,residualValue),
+                        data5: 0.0,
+                        data6: 0.0,
+                    }
+                    data.data0 = parseFloat(data.data0.toFixed(2));
+                    data.data1 = parseFloat(data.data1.toFixed(2));
+                    data.data3 = parseFloat(data.data3.toFixed(2));
+                    data.data4 = parseFloat(data.data4.toFixed(2));
+                    data.data5 = ((parseFloat(data.data4) - npv0) / npv0) / 0.2;
+                    data.data5 = parseFloat(data.data5.toFixed(2));
+                    data.data6 = -data.data5;
+                    this.analysis.data.push(data);
+                }
+
+                if(this.checkedItems.includes('年度收益')){
+                    let data = {
+                        name: '年度收益',
+                        data0: this.NPV(investment,benchmarkYield,annualExpenditure,annualIncome * 0.8,lifeCycle,residualValue),
+                        data1: this.NPV(investment,benchmarkYield,annualExpenditure,annualIncome * 0.9,lifeCycle,residualValue),
+                        data2: npv0,
+                        data3: this.NPV(investment,benchmarkYield,annualExpenditure,annualIncome * 1.1,lifeCycle,residualValue),
+                        data4: this.NPV(investment,benchmarkYield,annualExpenditure,annualIncome * 1.2,lifeCycle,residualValue),
+                        data5: 0.0,
+                        data6: 0.0,
+                    }
+                    data.data0 = parseFloat(data.data0.toFixed(2));
+                    data.data1 = parseFloat(data.data1.toFixed(2));
+                    data.data3 = parseFloat(data.data3.toFixed(2));
+                    data.data4 = parseFloat(data.data4.toFixed(2));
+                    data.data5 = ((parseFloat(data.data4) - npv0) / npv0) / 0.2;
+                    data.data5 = parseFloat(data.data5.toFixed(2));
+                    data.data6 = -data.data5;
+                    this.analysis.data.push(data);
+                }
+
+                if(this.checkedItems.includes('寿命期')){
+                    let data = {
+                        name: '寿命期',
+                        data0: this.NPV(investment,benchmarkYield,annualExpenditure,annualIncome,lifeCycle * 0.8,residualValue),
+                        data1: this.NPV(investment,benchmarkYield,annualExpenditure,annualIncome,lifeCycle * 0.9,residualValue),
+                        data2: npv0,
+                        data3: this.NPV(investment,benchmarkYield,annualExpenditure,annualIncome,lifeCycle * 1.1,residualValue),
+                        data4: this.NPV(investment,benchmarkYield,annualExpenditure,annualIncome,lifeCycle * 1.2,residualValue),
+                        data5: 0.0,
+                        data6: 0.0,
+                    }
+                    data.data0 = parseFloat(data.data0.toFixed(2));
+                    data.data1 = parseFloat(data.data1.toFixed(2));
+                    data.data3 = parseFloat(data.data3.toFixed(2));
+                    data.data4 = parseFloat(data.data4.toFixed(2));
+                    data.data5 = ((parseFloat(data.data4) - npv0) / npv0) / 0.2;
+                    data.data5 = parseFloat(data.data5.toFixed(2));
+                    data.data6 = -data.data5;
+                    this.analysis.data.push(data);
+                }
+
+                if(this.checkedItems.includes('残值')){
+                    let data = {
+                        name: '残值',
+                        data0: this.NPV(investment,benchmarkYield,annualExpenditure,annualIncome,lifeCycle,residualValue * 0.8),
+                        data1: this.NPV(investment,benchmarkYield,annualExpenditure,annualIncome,lifeCycle,residualValue * 0.9),
+                        data2: npv0,
+                        data3: this.NPV(investment,benchmarkYield,annualExpenditure,annualIncome,lifeCycle,residualValue * 1.1),
+                        data4: this.NPV(investment,benchmarkYield,annualExpenditure,annualIncome,lifeCycle,residualValue * 1.2),
+                        data5: 0.0,
+                        data6: 0.0,
+                    }
+                    data.data0 = parseFloat(data.data0.toFixed(2));
+                    data.data1 = parseFloat(data.data1.toFixed(2));
+                    data.data3 = parseFloat(data.data3.toFixed(2));
+                    data.data4 = parseFloat(data.data4.toFixed(2));
+                    data.data5 = ((parseFloat(data.data4) - npv0) / npv0) / 0.2;
+                    data.data5 = parseFloat(data.data5.toFixed(2));
+                    data.data6 = -data.data5;
+                    this.analysis.data.push(data);
+                }
+                this.selectItemChange();
+            },
+            selectItemChange(){
+                //进行排序
+                if(this.analysis.data.length > 1){
+                    //必须要进行排序
+                    //写排序器
+                    if(this.order == 'acs'){
+                        function compare(data1, data2) {
+                            if(Math.abs(data1.data5) <= Math.abs(data2.data5)){
+                                return -1;
+                            }else{
+                                return 1;
+                            }
+                        }
+                        this.analysis.data.sort(compare);
+                    }
+                    if(this.order == 'des'){
+                        function compare(data1, data2) {
+                            if(Math.abs(data1.data5) <= Math.abs(data2.data5)){
+                                return 1;
+                            }else{
+                                return -1;
+                            }
+                        }
+                        this.analysis.data.sort(compare);
+                    }
+                }
+            },
+            handleCheckAllChange(val) {
+                this.checkedItems = val ? ['投资', '基准收益率', '年度支出', '年度收益','寿命期','残值'] : [];
+                this.isIndeterminate = false;
+            },
+            handleCheckedItemsChange(value) {
+                let checkedCount = value.length;
+                this.checkAll = checkedCount === this.items.length;
+                this.isIndeterminate = checkedCount > 0 && checkedCount < this.items.length;
+            },
+            ShowGraph() {
+                if(this.analysis.data.length == 0){
+                    alert("请先进行敏感性分析！");
+                    return;
+                }
+                let legenddata = [];
+                let Showdata = [];
+                for(let i = 0; i < this.analysis.data.length; i++){
+                    legenddata.push(this.analysis.data[i].name);
+                }
+                legenddata.push('NPV');
+                let npv0 = this.analysis.data[0].data2;
+
+                for(let i = 0; i < this.analysis.data.length; i++){
+                    Showdata.push({
+                        name: this.analysis.data[i].name,
+                        type: 'line',
+                        symbolSize: 0,
+                        data: [[-20,this.analysis.data[i].data0],[0,npv0],[20,this.analysis.data[i].data4]],
+                    });
+                }
+                Showdata.push({
+                    name: 'NPV',
+                    type: 'scatter',
+                    colorBy: 'series',
+                    itemStyle: {
+                        normal: {
+                            label: {
+                                show: true,		//开启显示
+                                position: 'top',	//在上方显示
+                                textStyle: {	    //数值样式
+                                    color: 'black',
+                                    fontSize: 14
+                                },
+                                formatter: '方案的确定NPV值',
+                            }
+                        }
+                    },
+                    data: [[0,npv0]],
+                });
+                let myChart1 = echarts.init(document.getElementById('chart1'));
+                // 使用刚指定的配置项和数据显示图表。
+                myChart1.setOption({
+                    title: {
+                        text: '敏感性分析图'
+                    },
+                    legend: {
+                        data: legenddata,
+                    },
+                    tooltip: {},
+                    xAxis: {
+                        type: 'value',
+                        name: '因素变化率（%）',
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: "项目NPV（" + this.unit +"）",
+                    },
+                    series: Showdata,
+                },true);
+            },
+        }
+    });
+</script>
+</body>
+</html>
