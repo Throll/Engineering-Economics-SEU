@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="zh-ch">
+<head>
+    <meta charset="UTF-8">
+    <title>蒙特卡洛项目风险分析工具</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="蒙特卡洛项目风险分析工具">
+    <meta name="keywords" content="蒙特卡洛项目风险分析工具">
+    <!-- 引入组件库 -->
+    <script src="https://cdn.staticfile.org/echarts/4.3.0/echarts.min.js"></script>
+    <script src="https://cdn.staticfile.org/vue/2.5.16/vue.min.js"></script>
+    <script src="https://cdn.staticfile.org/element-ui/2.15.12/index.min.js"></script>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="https://cdn.staticfile.org/element-ui/2.15.12/theme-chalk/index.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body  class="hold-transition">
+<h1 align="center">蒙特卡洛项目风险分析工具</h1>
+<div id="app">
+    <div class="app-container" style="text-align: center">
+        <el-container>
+            <el-aside width="10%" style="text-align: center" >
+            </el-aside>
+
+            <el-main>
+                <el-form :inline="true" width="80%">
+                    <h3 align="center">项目基本信息输入</h3>
+                </el-form>
+                <el-form :inline="true" label-width="120px" width="80%">
+                    <el-form-item label="投资">
+                        <el-select placeholder="请选择取值概率分布方式" v-model="form.Investment.selectValue" @change="selectItemChange_Investment">
+                            <el-option label="常数" value="changshu"></el-option>
+                            <el-option label="正态分布" value="zhengtai"></el-option>
+                            <el-option label="均匀分布" value="junyun"></el-option>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item v-if="form.Investment.isChangshu" label="取值">
+                        <el-input v-model="form.Investment.constvalue"></el-input>
+                    </el-form-item>
+
+                    <el-form-item v-if="form.Investment.isZhengtai" label="μ">
+                        <el-input v-model="form.Investment.mu"></el-input>
+                    </el-form-item>
+                    <el-form-item v-if="form.Investment.isZhengtai" label="σ">
+                        <el-input v-model="form.Investment.sigma"></el-input>
+                    </el-form-item>
+
+                    <el-form-item v-if="form.Investment.isJunyun" label="min">
+                        <el-input v-model="form.Investment.value_min"></el-input>
+                    </el-form-item>
+                    <el-form-item v-if="form.Investment.isJunyun" label="max">
+                        <el-input v-model="form.Investment.value_max"></el-input>
+                    </el-form-item>
+                </el-form>
+
+                <el-form style="text-align: center" :inline="true" label-width="120px">
+                    <el-form-item label="基准收益率(%)">
+                        <el-select placeholder="请选择取值概率分布方式" v-model="form.BenchmarkYield.selectValue" @change="selectItemChange_BenchmarkYield">
+                            <el-option label="常数" value="changshu"></el-option>
+                            <el-option label="正态分布" value="zhengtai"></el-option>
+                            <el-option label="均匀分布" value="junyun"></el-option>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item v-if="form.BenchmarkYield.isChangshu" label="取值">
+                        <el-input v-model="form.BenchmarkYield.constvalue"></el-input>
+                    </el-form-item>
+
+                    <el-form-item v-if="form.BenchmarkYield.isZhengtai" label="μ">
+                        <el-input v-model="form.BenchmarkYield.mu"></el-input>
+                    </el-form-item>
+                    <el-form-item v-if="form.BenchmarkYield.isZhengtai" label="σ">
+                        <el-input v-model="form.BenchmarkYield.sigma"></el-input>
+                    </el-form-item>
+
+                    <el-form-item v-if="form.BenchmarkYield.isJunyun" label="min">
+                        <el-input v-model="form.BenchmarkYield.value_min"></el-input>
+                    </el-form-item>
+                    <el-form-item v-if="form.BenchmarkYield.isJunyun" label="max">
+                        <el-input v-model="form.BenchmarkYield.value_max"></el-input>
+                    </el-form-item>
+                </el-form>
+
+                <el-form style="text-align: center" :inline="true" label-width="120px">
+                    <el-form-item label="年度支出">
+                        <el-select placeholder="请选择取值概率分布方式" v-model="form.AnnualExpenditure.selectValue" @change="selectItemChange_AnnualExpenditure">
+                            <el-option label="常数" value="changshu"></el-option>
+                            <el-option label="正态分布" value="zhengtai"></el-option>
+                            <el-option label="均匀分布" value="junyun"></el-option>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item v-if="form.AnnualExpenditure.isChangshu" label="取值">
+                        <el-input v-model="form.AnnualExpenditure.constvalue"></el-input>
+                    </el-form-item>
+
+                    <el-form-item v-if="form.AnnualExpenditure.isZhengtai" label="μ">
+                        <el-input v-model="form.AnnualExpenditure.mu"></el-input>
+                    </el-form-item>
+                    <el-form-item v-if="form.AnnualExpenditure.isZhengtai" label="σ">
+                        <el-input v-model="form.AnnualExpenditure.sigma"></el-input>
+                    </el-form-item>
+
+                    <el-form-item v-if="form.AnnualExpenditure.isJunyun" label="min">
+                        <el-input v-model="form.AnnualExpenditure.value_min"></el-input>
+                    </el-form-item>
+                    <el-form-item v-if="form.AnnualExpenditure.isJunyun" label="max">
+                        <el-input v-model="form.AnnualExpenditure.value_max"></el-input>
+                    </el-form-item>
+                </el-form>
+
+                <el-form style="text-align: center" :inline="true" label-width="120px">
+                    <el-form-item label="年度收益">
+                        <el-select placeholder="请选择取值概率分布方式" v-model="form.AnnualIncome.selectValue" @change="selectItemChange_AnnualIncome">
+                            <el-option label="常数" value="changshu"></el-option>
+                            <el-option label="正态分布" value="zhengtai"></el-option>
+                            <el-option label="均匀分布" value="junyun"></el-option>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item v-if="form.AnnualIncome.isChangshu" label="取值">
+                        <el-input v-model="form.AnnualIncome.constvalue"></el-input>
+                    </el-form-item>
+
+                    <el-form-item v-if="form.AnnualIncome.isZhengtai" label="μ">
+                        <el-input v-model="form.AnnualIncome.mu"></el-input>
+                    </el-form-item>
+                    <el-form-item v-if="form.AnnualIncome.isZhengtai" label="σ">
+                        <el-input v-model="form.AnnualIncome.sigma"></el-input>
+                    </el-form-item>
+
+                    <el-form-item v-if="form.AnnualIncome.isJunyun" label="min">
+                        <el-input v-model="form.AnnualIncome.value_min"></el-input>
+                    </el-form-item>
+                    <el-form-item v-if="form.AnnualIncome.isJunyun" label="max">
+                        <el-input v-model="form.AnnualIncome.value_max"></el-input>
+                    </el-form-item>
+                </el-form>
+
+                <el-form style="text-align: center" :inline="true" label-width="120px">
+                    <el-form-item label="寿命期">
+                        <el-select placeholder="请选择取值概率分布方式" v-model="form.LifeCycle.selectValue" @change="selectItemChange_LifeCycle">
+                            <el-option label="常数" value="changshu"></el-option>
+                            <el-option label="正态分布" value="zhengtai"></el-option>
+                            <el-option label="均匀分布" value="junyun"></el-option>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item v-if="form.LifeCycle.isChangshu" label="取值">
+                        <el-input v-model="form.LifeCycle.constvalue"></el-input>
+                    </el-form-item>
+
+                    <el-form-item v-if="form.LifeCycle.isZhengtai" label="μ">
+                        <el-input v-model="form.LifeCycle.mu"></el-input>
+                    </el-form-item>
+                    <el-form-item v-if="form.LifeCycle.isZhengtai" label="σ">
+                        <el-input v-model="form.LifeCycle.sigma"></el-input>
+                    </el-form-item>
+
+                    <el-form-item v-if="form.LifeCycle.isJunyun" label="min">
+                        <el-input v-model="form.LifeCycle.value_min"></el-input>
+                    </el-form-item>
+                    <el-form-item v-if="form.LifeCycle.isJunyun" label="max">
+                        <el-input v-model="form.LifeCycle.value_max"></el-input>
+                    </el-form-item>
+                </el-form>
+
+                <el-form style="text-align: center" :inline="true" label-width="120px">
+                    <el-form-item label="残值">
+                        <el-select placeholder="请选择取值概率分布方式" v-model="form.ResidualValue.selectValue" @change="selectItemChange_ResidualValue">
+                            <el-option label="常数" value="changshu"></el-option>
+                            <el-option label="正态分布" value="zhengtai"></el-option>
+                            <el-option label="均匀分布" value="junyun"></el-option>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item v-if="form.ResidualValue.isChangshu" label="取值">
+                        <el-input v-model="form.ResidualValue.constvalue"></el-input>
+                    </el-form-item>
+
+                    <el-form-item v-if="form.ResidualValue.isZhengtai" label="μ">
+                        <el-input v-model="form.ResidualValue.mu"></el-input>
+                    </el-form-item>
+                    <el-form-item v-if="form.ResidualValue.isZhengtai" label="σ">
+                        <el-input v-model="form.ResidualValue.sigma"></el-input>
+                    </el-form-item>
+
+                    <el-form-item v-if="form.ResidualValue.isJunyun" label="min">
+                        <el-input v-model="form.ResidualValue.value_min"></el-input>
+                    </el-form-item>
+                    <el-form-item v-if="form.ResidualValue.isJunyun" label="max">
+                        <el-input v-model="form.ResidualValue.value_max"></el-input>
+                    </el-form-item>
+                </el-form>
+            </el-main>
+            <el-aside width="10%" style="text-align: center" >
+            </el-aside>
+        </el-container>
+    </div>
+    <div class="app-container">
+        <el-container>
+            <el-aside width="50%" style="text-align: center" >
+                <el-form style="text-align: center; margin-top: 40px" :inline="true">
+                    <el-form-item label="模拟次数">
+                        <el-input v-model="count" placeholder="请输入整数"></el-input>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button size="medium" type="primary" @click="MC_simulation()">模拟计算NPV</el-button>
+                    </el-form-item>
+                    <el-form-item label="柱状图区间间隔">
+                        <el-input v-model="gap" placeholder="请输入整数"></el-input>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button size="medium" type="primary" @click="ShowBarGraph()">绘制柱状图</el-button>
+                    </el-form-item>
+                </el-form>
+
+                <el-form style="text-align: center" :inline="true">
+                    <el-form-item label="NPV<=">
+                        <el-input v-model="ANPV" placeholder="请输入数据"></el-input>
+                    </el-form-item>
+                    <el-form-item label="的概率为">
+                        <el-input v-model="res" placeholder="尚未进行计算"></el-input>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button size="medium" type="primary" @click="Search()">计算</el-button>
+                    </el-form-item>
+                </el-form>
+            </el-aside>
+
+            <el-main width="50%">
+                <el-form style="text-align: center" :inline="true" label-width="150px">
+                    <el-form-item label="NPV期望值">
+                        <el-input v-model="result.expectation"></el-input>
+                    </el-form-item>
+                </el-form>
+                <el-form style="text-align: center" :inline="true" label-width="150px">
+                    <el-form-item label="NPV最大值">
+                        <el-input v-model="result.max"></el-input>
+                    </el-form-item>
+                </el-form>
+                <el-form style="text-align: center" :inline="true" label-width="150px">
+                    <el-form-item label="NPV最小值">
+                        <el-input v-model="result.min"></el-input>
+                    </el-form-item>
+                </el-form>
+                <el-form style="text-align: center" :inline="true" label-width="150px">
+                    <el-form-item label="NPV标准差">
+                        <el-input v-model="result.standard"></el-input>
+                    </el-form-item>
+                </el-form>
+            </el-main>
+        </el-container>
+    </div>
+    <div class="app-container">
+        <el-container>
+            <el-main>
+                <div id="chart1" style="height:600px;"></div>
+            </el-main>
+        </el-container>
+    </div>
+    <div class="app-container">
+        <el-container>
+            <el-aside width="20%" style="text-align: center" >
+                <el-form style="text-align: center" :inline="true">
+                    <el-form-item>
+                        <el-button size="medium" type="primary" @click="ShowProbabilityCumulativeGraph()">绘制概率累计图</el-button>
+                    </el-form-item>
+                </el-form>
+                <el-form style="text-align: center" :inline="true">
+                    <el-form-item label="百分比标记（单位%），以英文逗号间隔">
+                        <el-input v-model="graph.mark" placeholder="请输入数据"></el-input>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button size="medium" type="primary" @click="Marks()">标记</el-button>
+                    </el-form-item>
+                </el-form>
+            </el-aside>
+
+            <el-main width="80%">
+                <div id="chart2" style="height:600px;"></div>
+            </el-main>
+
+
+        </el-container>
+    </div>
+</div>
+<script type="text/javascript">
+    new Vue({
+        el: '#app',
+        data: {
+            count: 20000,
+            NPVs: [],
+            gap: 10000,
+            result: {
+                isShow: true,
+                expectation: '',
+                max: '',
+                min: '',
+                standard: '',
+                intervals: [],
+                counts:[],
+            },
+            form: {
+                Investment: {
+                    selectValue: "",
+                    constvalue: "",
+                    mu: "",
+                    sigma: "",
+                    value_min: "",
+                    value_max: "",
+                    isChangshu: false,
+                    isZhengtai: false,
+                    isJunyun: false
+                },
+                BenchmarkYield: {
+                    selectValue: "",
+                    constvalue: "",
+                    mu: "",
+                    sigma: "",
+                    value_min: "",
+                    value_max: "",
+                    isChangshu: false,
+                    isZhengtai: false,
+                    isJunyun: false
+                },
+                AnnualExpenditure: {
+                    selectValue: "",
+                    constvalue: "",
+                    mu: "",
+                    sigma: "",
+                    value_min: "",
+                    value_max: "",
+                    isChangshu: false,
+                    isZhengtai: false,
+                    isJunyun: false
+                },
+                AnnualIncome: {
+                    selectValue: "",
+                    constvalue: "",
+                    mu: "",
+                    sigma: "",
+                    value_min: "",
+                    value_max: "",
+                    isChangshu: false,
+                    isZhengtai: false,
+                    isJunyun: false
+                },
+                LifeCycle: {
+                    selectValue: "",
+                    constvalue: "",
+                    mu: "",
+                    sigma: "",
+                    value_min: "",
+                    value_max: "",
+                    isChangshu: false,
+                    isZhengtai: false,
+                    isJunyun: false
+                },
+                ResidualValue: {
+                    selectValue: "",
+                    constvalue: "",
+                    mu: "",
+                    sigma: "",
+                    value_min: "",
+                    value_max: "",
+                    isChangshu: false,
+                    isZhengtai: false,
+                    isJunyun: false
+                },
+            },
+            ANPV: '0',
+            res: '',
+            graph:{
+                isProbability: false,
+                mark: '25,50,75',
+            },
+        },
+        methods: {
+            //生成服从正态分布的随机数（实际只是大致服从，不是完全服从）
+            //两个参数分别是μ和σ
+            getNumberInNormalDistribution(mean, std_dev){
+                let u = 0.0, v = 0.0, w = 0.0, c = 0.0;
+                do {
+                    //获得两个（-1,1）的独立随机变量
+                    u = Math.random() * 2 - 1.0;
+                    v = Math.random() * 2 - 1.0;
+                    w = u * u + v * v;
+                } while (w == 0.0 || w >= 1.0)
+                //Box-Muller转换
+                c = Math.sqrt((-2 * Math.log(w)) / w);
+                let normal = parseFloat(mean) + (u * c) * parseFloat(std_dev);
+                return normal;
+            },
+            selectItemChange_Investment(selectValue) {
+                if (selectValue == "changshu") {
+                    this.form.Investment.isChangshu = true;
+                    this.form.Investment.isZhengtai = false;
+                    this.form.Investment.isJunyun = false;
+                }
+                if (selectValue == "zhengtai") {
+                    this.form.Investment.isChangshu = false;
+                    this.form.Investment.isZhengtai = true;
+                    this.form.Investment.isJunyun = false;
+                }
+                if (selectValue == "junyun") {
+                    this.form.Investment.isChangshu = false;
+                    this.form.Investment.isZhengtai = false;
+                    this.form.Investment.isJunyun = true;
+                }
+            },
+            selectItemChange_BenchmarkYield(selectValue) {
+                if (selectValue == "changshu") {
+                    this.form.BenchmarkYield.isChangshu = true;
+                    this.form.BenchmarkYield.isZhengtai = false;
+                    this.form.BenchmarkYield.isJunyun = false;
+                }
+                if (selectValue == "zhengtai") {
+                    this.form.BenchmarkYield.isChangshu = false;
+                    this.form.BenchmarkYield.isZhengtai = true;
+                    this.form.BenchmarkYield.isJunyun = false;
+                }
+                if (selectValue == "junyun") {
+                    this.form.BenchmarkYield.isChangshu = false;
+                    this.form.BenchmarkYield.isZhengtai = false;
+                    this.form.BenchmarkYield.isJunyun = true;
+                }
+            },
+            selectItemChange_AnnualExpenditure(selectValue) {
+                if (selectValue == "changshu") {
+                    this.form.AnnualExpenditure.isChangshu = true;
+                    this.form.AnnualExpenditure.isZhengtai = false;
+                    this.form.AnnualExpenditure.isJunyun = false;
+                }
+                if (selectValue == "zhengtai") {
+                    this.form.AnnualExpenditure.isChangshu = false;
+                    this.form.AnnualExpenditure.isZhengtai = true;
+                    this.form.AnnualExpenditure.isJunyun = false;
+                }
+                if (selectValue == "junyun") {
+                    this.form.AnnualExpenditure.isChangshu = false;
+                    this.form.AnnualExpenditure.isZhengtai = false;
+                    this.form.AnnualExpenditure.isJunyun = true;
+                }
+            },
+            selectItemChange_AnnualIncome(selectValue) {
+                if (selectValue == "changshu") {
+                    this.form.AnnualIncome.isChangshu = true;
+                    this.form.AnnualIncome.isZhengtai = false;
+                    this.form.AnnualIncome.isJunyun = false;
+                }
+                if (selectValue == "zhengtai") {
+                    this.form.AnnualIncome.isChangshu = false;
+                    this.form.AnnualIncome.isZhengtai = true;
+                    this.form.AnnualIncome.isJunyun = false;
+                }
+                if (selectValue == "junyun") {
+                    this.form.AnnualIncome.isChangshu = false;
+                    this.form.AnnualIncome.isZhengtai = false;
+                    this.form.AnnualIncome.isJunyun = true;
+                }
+            },
+            selectItemChange_LifeCycle(selectValue) {
+                if (selectValue == "changshu") {
+                    this.form.LifeCycle.isChangshu = true;
+                    this.form.LifeCycle.isZhengtai = false;
+                    this.form.LifeCycle.isJunyun = false;
+                }
+                if (selectValue == "zhengtai") {
+                    this.form.LifeCycle.isChangshu = false;
+                    this.form.LifeCycle.isZhengtai = true;
+                    this.form.LifeCycle.isJunyun = false;
+                }
+                if (selectValue == "junyun") {
+                    this.form.LifeCycle.isChangshu = false;
+                    this.form.LifeCycle.isZhengtai = false;
+                    this.form.LifeCycle.isJunyun = true;
+                }
+            },
+            selectItemChange_ResidualValue(selectValue) {
+                if (selectValue == "changshu") {
+                    this.form.ResidualValue.isChangshu = true;
+                    this.form.ResidualValue.isZhengtai = false;
+                    this.form.ResidualValue.isJunyun = false;
+                }
+                if (selectValue == "zhengtai") {
+                    this.form.ResidualValue.isChangshu = false;
+                    this.form.ResidualValue.isZhengtai = true;
+                    this.form.ResidualValue.isJunyun = false;
+                }
+                if (selectValue == "junyun") {
+                    this.form.ResidualValue.isChangshu = false;
+                    this.form.ResidualValue.isZhengtai = false;
+                    this.form.ResidualValue.isJunyun = true;
+                }
+            },
+            //单次NPV计算过程，参数是投资，基本收益率，年支，年收，寿命期，残值
+            NPV(investment,benchmarkYield, annualExpenditure, annualIncome, lifeCycle, residualValue){
+                return (parseFloat(annualIncome) - parseFloat(annualExpenditure)) / (1.0 + parseFloat(benchmarkYield)) * (1 - Math.pow(1.0 / (1.0 + parseFloat(benchmarkYield)), parseInt(lifeCycle))) / (1 - 1.0 / (1.0 + parseFloat(benchmarkYield))) - parseFloat(investment) + (parseFloat(residualValue) / Math.pow(1.0 + parseFloat(benchmarkYield), parseInt(lifeCycle)));
+            },
+            MC_simulation(){
+                this.NPVs = [];
+                this.res = '';
+                let tempnpv = '';
+                //套循环，进行多次计算
+                for(let i = 0; i < this.count; i++){
+                    //首先生成参数
+                    //初始投资
+                    let investment = -888.8;
+                    if(this.form.Investment.isChangshu){
+                        investment = parseFloat(this.form.Investment.constvalue);
+                    }
+                    if(this.form.Investment.isZhengtai){
+                        investment = parseFloat(this.getNumberInNormalDistribution(this.form.Investment.mu, this.form.Investment.sigma));
+                    }
+                    if(this.form.Investment.isJunyun){
+                        investment = Math.random() * (parseFloat(this.form.Investment.value_max) - parseFloat(this.form.Investment.value_min)) + parseFloat(this.form.Investment.value_min);
+                    }
+
+                    //基准收益率
+                    let benchmarkYield = -888.8;
+                    if(this.form.BenchmarkYield.isChangshu){
+                        benchmarkYield = parseFloat(this.form.BenchmarkYield.constvalue) / 100;
+                    }
+                    if(this.form.BenchmarkYield.isZhengtai){
+                        benchmarkYield = parseFloat(this.getNumberInNormalDistribution(this.form.BenchmarkYield.mu, this.form.BenchmarkYield.sigma)) / 100;
+                    }
+                    if(this.form.BenchmarkYield.isJunyun){
+                        benchmarkYield = Math.random() * (parseFloat(this.form.BenchmarkYield.value_max) - parseFloat(this.form.BenchmarkYield.value_min)) + parseFloat(this.form.BenchmarkYield.value_min);
+                        benchmarkYield /= 100;
+                    }
+
+                    //年度支出
+                    let annualExpenditure = -888.8;
+                    if(this.form.AnnualExpenditure.isChangshu){
+                        annualExpenditure = parseFloat(this.form.AnnualExpenditure.constvalue);
+                    }
+                    if(this.form.AnnualExpenditure.isZhengtai){
+                        annualExpenditure = parseFloat(this.getNumberInNormalDistribution(this.form.AnnualExpenditure.mu, this.form.AnnualExpenditure.sigma));
+                    }
+                    if(this.form.AnnualExpenditure.isJunyun){
+                        annualExpenditure = Math.random() * (parseFloat(this.form.AnnualExpenditure.value_max) - parseFloat(this.form.AnnualExpenditure.value_min)) + parseFloat(this.form.AnnualExpenditure.value_min);
+                    }
+
+                    //年度收益
+                    let annualIncome = -888.8;
+                    if(this.form.AnnualIncome.isChangshu){
+                        annualIncome = parseFloat(this.form.AnnualIncome.constvalue);
+                    }
+                    if(this.form.AnnualIncome.isZhengtai){
+                        annualIncome = parseFloat(this.getNumberInNormalDistribution(this.form.AnnualIncome.mu, this.form.AnnualIncome.sigma));
+                    }
+                    if(this.form.AnnualIncome.isJunyun){
+                        annualIncome = Math.random() * (parseFloat(this.form.AnnualIncome.value_max) - parseFloat(this.form.AnnualExpenditure.value_min)) + parseFloat(this.form.AnnualIncome.value_min);
+                    }
+
+                    //寿命期，需要取整
+                    let lifeCycle = -888.8;
+                    if(this.form.LifeCycle.isChangshu){
+                        lifeCycle = parseInt(this.form.LifeCycle.constvalue);
+                    }
+                    if(this.form.LifeCycle.isZhengtai){
+                        lifeCycle = parseInt(this.getNumberInNormalDistribution(this.form.LifeCycle.mu, this.form.LifeCycle.sigma));
+                    }
+                    if(this.form.LifeCycle.isJunyun){
+                        lifeCycle = Math.floor(Math.random() * (parseInt(this.form.LifeCycle.value_max) - parseInt(this.form.LifeCycle.value_min) + 1) + parseInt(this.form.LifeCycle.value_min));
+                    }
+
+                    //残值
+                    let residualValue = -888.8;
+                    if(this.form.ResidualValue.isChangshu){
+                        residualValue = parseFloat(this.form.ResidualValue.constvalue);
+                    }
+                    if(this.form.ResidualValue.isZhengtai){
+                        residualValue = parseFloat(this.getNumberInNormalDistribution(this.form.ResidualValue.mu, this.form.ResidualValue.sigma));
+                    }
+                    if(this.form.ResidualValue.isJunyun){
+                        residualValue = Math.random() * (parseFloat(this.form.ResidualValue.value_max) - parseFloat(this.form.ResidualValue.value_min)) + parseFloat(this.form.ResidualValue.value_min);
+                    }
+
+                    if(investment == -888.8 || benchmarkYield == -888.8 || annualExpenditure == -888.8 || annualIncome == -888.8 || lifeCycle == -888.8 || residualValue == -888.8){
+                        alert("生成测试数据失败！请正确设置项目基本信息！");
+                        return;
+                    }
+
+                    tempnpv = parseFloat(this.NPV(investment,benchmarkYield,annualExpenditure,annualIncome,lifeCycle,residualValue));
+                    this.NPVs.push(tempnpv);
+                }
+                function compare(a, b){
+                    return a - b;
+                }
+                this.NPVs.sort(compare);
+
+                this.result.min = (this.NPVs[0]).toFixed(2);
+                this.result.max = (this.NPVs[this.NPVs.length - 1]).toFixed(2);
+
+                let expectation = 0.0;
+                for(let i = 0; i < this.NPVs.length; i++){
+                    expectation += this.NPVs[i];
+                }
+                expectation /= this.NPVs.length;
+
+                let variance = 0.0;
+                for(let i = 0; i < this.NPVs.length; i++){
+                    variance += Math.pow((this.NPVs[i] - expectation), 2);
+                }
+                variance /= this.NPVs.length;
+                this.result.expectation = expectation.toFixed(2);
+                this.result.standard = Math.sqrt(variance).toFixed(2);
+            },
+            //二分查找插入位置，实质上是查个数
+            BinarySearch(numbers, data){
+                //本应用中的需求是查恰好有data >= numbers中的元素的最左位置
+                //numbers必须是已升序排列数组
+                if(numbers[numbers.length - 1] < data){
+                    return numbers.length - 1;
+                }
+                if(numbers[0] > data){
+                    return -1;
+                }
+                let left = 0, right = numbers.length - 1, mid = Math.floor((right + left) / 2) , index = -1;
+                while(left <= right){
+                    if(numbers[mid] >= data){
+                        right = mid - 1;
+                        index = mid;
+                    }else{
+                        left = mid + 1;
+                    }
+                    mid = Math.floor((right + left) / 2);
+                }
+                return index;
+            },
+            ShowBarGraph() {
+                if(this.NPVs.length == 0){
+                    alert("请先进行模拟！");
+                    return;
+                }
+                this.result.intervals = [];
+                this.result.counts = [];
+                //我的区间划分方法
+                //原则：以数学期望为中心进行扩散
+                //目前没想到好的方法，让用户自行决定吧
+                let gap = Math.abs(parseInt(this.gap));
+
+                for(let i = 1; gap * (i - 1) < Math.abs(this.result.min); i++){
+                    this.result.intervals.unshift( -(gap * i));
+                    this.result.counts.unshift(0);
+                }
+                this.result.intervals.push(0);
+                this.result.counts.push(0);
+                for(let i = 1; gap * (i - 1) < Math.abs(this.result.max); i++){
+                    this.result.intervals.push((gap * i));
+                    this.result.counts.push(0);
+                }
+
+                //尝试统计个数
+                for(let i = 0; i < this.NPVs.length; i++){
+                    for(let n = 0; n < this.result.intervals.length - 1; n++){
+                        if(parseFloat(this.NPVs[i]) > this.result.intervals[n] && parseFloat(this.NPVs[i]) < this.result.intervals[n + 1]){
+                            this.result.counts[n]++;
+                        }
+                    }
+                }
+
+                let myChart1 = echarts.init(document.getElementById('chart1'));
+                // 使用刚指定的配置项和数据显示图表。
+                myChart1.setOption({
+                    title: {
+                        text: '项目NPV模拟结果分布图'
+                    },
+                    xAxis: {
+                        type: 'category',
+                        name: 'NPV值',
+                        boundaryGap: false,
+                        data: this.result.intervals,
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: '结果数（个）'
+                    },
+                    series: [
+                        {
+                            data: this.result.counts,
+                            type: 'bar',
+                            showBackground: true,
+                            itemStyle: {
+                                normal: {
+                                    label: {
+                                        show: true,		//开启显示
+                                        position: 'top',	//在上方显示
+                                        textStyle: {	    //数值样式
+                                            fontSize: 16
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                },true);
+            },
+            ShowProbabilityCumulativeGraph() {
+                if(this.NPVs.length == 0){
+                    alert("请先进行模拟！");
+                    return;
+                }
+                this.graph.isProbability = true;
+                let res = [];
+                let total = 0;
+                for(let n = 0; n < this.NPVs.length; n += 10){
+                    if(n + 10 > this.NPVs.length){
+                        let temp = 0.0;
+                        for(let i = 0; i < this.NPVs.length - n; i++){
+                            temp += this.NPVs[n + i];
+                        }
+                        res.push([temp / (this.NPVs.length - n), 1.0]);
+                    }else{
+                        total += 10;
+                        let temp = 0.0;
+                        for(let i = 0; i < 10; i++){
+                            temp += this.NPVs[n + i];
+                        }
+                        res.push([temp / 10, parseFloat((total / this.count).toFixed(2))]);
+                    }
+                }
+                let myChart2 = echarts.init(document.getElementById('chart2'));
+                // 使用刚指定的配置项和数据显示图表。
+                myChart2.setOption({
+                    title: {
+                        text: '项目NPV累积概率图'
+                    },
+                    xAxis: {
+                        type: 'value',
+                        name: 'NPV值',
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: "累计概率（%）",
+                    },
+                    series: [
+                        {
+                            data: res,
+                            type: 'line',
+                            symbolSize: 0,
+                            smooth: true,
+                        },
+                    ]
+                },true);
+
+            },
+            Search(){
+                if(this.NPVs.length == 0){
+                    alert("请先进行模拟！");
+                    return;
+                }
+                this.res = '';
+                let index = this.BinarySearch(this.NPVs, parseFloat(this.ANPV));
+                this.res = ((parseInt(index + 1) / this.NPVs.length) * 100).toFixed(2) + "%";
+            },
+            MarklineItem(val, data){
+                let index = Math.floor((parseFloat(val) / 100 ) * this.NPVs.length);
+                let item = {
+                    name: '位置标记线',
+                    type: 'line',
+                    markLine: {
+                        symbol:['none','none'],
+                        lineStyle: {
+                            color : 'green',
+                            type: 'solid',
+                            fontSize: 16
+                        },
+                        label: {
+                            formatter: val + "%, NPV = " + this.NPVs[index].toFixed(2),
+                            position: 'middle',
+                        },
+                        data: [[
+                            {coord: [this.NPVs[index] , 0] },
+                            {coord: [this.NPVs[index] , 1] }
+                        ]]
+                    }
+                };
+                data.push(item);
+
+            },
+            Marks(){
+                if(!this.graph.isProbability){
+                    alert("请先绘制累计概率图！");
+                    return;
+                }
+                let datas = this.graph.mark.split(',');
+                let showdata = [];
+                for(let i = 0; i < datas.length; i++){
+                    this.MarklineItem(datas[i],showdata);
+                }
+                let myChart2 = echarts.init(document.getElementById('chart2'));
+                // 使用刚指定的配置项和数据显示图表。
+                myChart2.setOption({
+                    series: showdata,
+                }, false);
+            }
+        }
+    });
+</script>
+</body>
+</html>
